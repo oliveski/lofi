@@ -1,0 +1,56 @@
+#!/bin/bash
+#stream audio and video from lofi hip hop radios
+#lofi --help for usage
+
+quality=93	# ok quality (640x360) Use youtube-dl -F <video url> for more info
+buffer=1024	# youtube-dl's default buffer-size. Change if you feel like you need
+relax='https://youtu.be/5qap5aO4i9A'
+synth='https://youtu.be/xxgxkjV70Vc'
+url=$relax	# defaults to beats to relax/study to
+relax_title="lofi hip hop radio"
+synth_title="synthwave for retro dreaming"
+title=$relax_title	# also default
+
+if [[ $# -gt 3 ]]; then
+	echo "Dude, too many args. Use --help for help";
+	exit 1
+elif ! echo $1 | grep -q -E -e '-c|-a|-v|''|--help'; then
+	echo "Weird arguments, dude. Use --help for help";
+	exit 1
+fi
+
+if [[ $1 == '--help' ]]; then
+	echo "lofi"
+	echo -e "\t defaults to audio from lofi hip hop radio - beats to relax/study to"
+	echo -e "\t-c for ChillSynth FM - lofi synthwave radio for retro dreaming"
+	echo -e "\t-a for audio only"
+	echo -e "\t-v for video"
+	echo -e "\t-v [quality] sets the video quality"
+	echo -e "\tUse youtube-dl -F <video url> for quality list"
+	echo -e "\t--help displays this message"
+	exit 0
+fi
+
+ARGS=($@)
+
+if [[ ${ARGS[0]} == '-c' ]]; then
+	url=$synth;
+	title=$synth_title;
+	for arg in $(seq 0 $(($# - 1))); do
+		ARGS[$arg]=${ARGS[$(($arg + 1))]};
+	done
+fi
+
+if [[ ${ARGS[0]} == '-a' || ${ARGS[0]} == '' ]]; then
+	# audio quality doesn't change, so we
+	# stream the worst to download less
+	# video would suck however
+	youtube-dl --buffer-size $buffer -f 91 -o - "$url" 2> /dev/null |\
+		mpv --no-video - 2> /dev/null
+fi
+
+if [[ ${ARGS[0]} == '-v' ]]; then
+	[[ ${ARGS[1]} != '' ]] && quality=${ARGS[1]};
+	youtube-dl --buffer-size $buffer -f $quality -o - "$url" 2> /dev/null |\
+		mpv --title="$title" - 2> /dev/null
+fi
