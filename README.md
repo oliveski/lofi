@@ -2,7 +2,7 @@
 Listen to "lofi hip hop - beats to relax / studdy to" or "ChillSynth FM" through the terminal
 
 ## Dependencies:
-+ Youtube-dl
++ yt-dlp
 + mpv
 
 Both are very popular and should probably be on your distro's repositories.
