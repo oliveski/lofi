@@ -1,20 +1,36 @@
 #!/bin/bash
-#stream audio and video from lofi hip hop radios
+#stream audio and video from lofi hip hop radios (and math rock playlists now!)
 #lofi --help for usage
 
-quality=93	# ok quality (640x360) use yt-dlp -F <video url> for more info
 buffer=1024	# yt-dlp's buffer-size. Change if you feel like you need
-relax='https://www.youtube.com/live/jfKfPfyJRdk'
-synth='https://www.youtube.com/live/UedTcufyrHc'
-url=$relax	# defaults to beats to relax/study to
-relax_title="lofi hip hop radio"
-synth_title="synthwave for retro dreaming"
-title=$relax_title	# also default
+
+# the items in these arrays are the URL, the title, the quality for video
+# and the quality for audio respectively
+relax_params=(
+	'https://www.youtube.com/live/jfKfPfyJRdk'
+	'lofi hip hop radio'
+	93
+	91
+)
+
+synth_params=(
+	'https://www.youtube.com/live/UedTcufyrHc'
+	"synthwave for retro dreaming"
+	93
+	91
+)
+
+math_params=(
+	'https://youtu.be/AFWOpC45IAw'
+	"walking in the snow (math rock playlist)"
+	18
+	599
+)
 
 if [[ $# -gt 3 ]]; then
 	echo "Dude, too many args. Use --help for help";
 	exit 1
-elif ! echo $1 | grep -q -E -e '-c|-a|-v|''|--help'; then
+elif [[ $# -gt 0 ]] && ! echo $1 | grep -q -w -E -e "-c|-a|-m|-v|''|--help"; then
 	echo "Weird arguments, dude. Use --help for help";
 	exit 1
 fi
@@ -23,6 +39,7 @@ if [[ $1 == '--help' ]]; then
 	echo "lofi"
 	echo -e "\t defaults to audio from lofi hip hop radio - beats to relax/study to"
 	echo -e "\t-c for ChillSynth FM - lofi synthwave radio for retro dreaming"
+	echo -e "\t-m for walking in the snow (math rock playlist)"
 	echo -e "\t-a for audio only"
 	echo -e "\t-v for video"
 	echo -e "\t-v [quality] sets the video quality"
@@ -33,24 +50,37 @@ fi
 
 ARGS=($@)
 
-if [[ ${ARGS[0]} == '-c' ]]; then
-	url=$synth;
-	title=$synth_title;
-	for arg in $(seq 0 $(($# - 1))); do
-		ARGS[$arg]=${ARGS[$(($arg + 1))]};
-	done
-fi
+run_params=("${relax_params[@]}") # defaults to beats to relax/study to
 
-if [[ ${ARGS[0]} == '-a' || ${ARGS[0]} == '' ]]; then
-	# audio quality doesn't change, so we
-	# stream the worst to download less
-	# video would suck however
-	yt-dlp --buffer-size $buffer -f 91 -o - "$url" 2> /dev/null |\
-		mpv --no-video - 2> /dev/null
-fi
+case ${ARGS[0]} in
+	'-c')
+		run_params=("${synth_params[@]}")
+		for arg in $(seq 0 $(($# - 1))); do
+			ARGS[$arg]=${ARGS[$(($arg + 1))]};
+		done
+		;;
+	'-m')
+		run_params=("${math_params[@]}")
+		for arg in $(seq 0 $(($# - 1))); do
+			ARGS[$arg]=${ARGS[$(($arg + 1))]};
+		done
+		;;
+	*)
+		# defaults to beats to relax/study to
+		run_params=("${relax_params[@]}")
+		;;
+esac
 
-if [[ ${ARGS[0]} == '-v' ]]; then
-	[[ ${ARGS[1]} != '' ]] && quality=${ARGS[1]};
+url=${run_params[0]};
+title=${run_params[1]};
+
+if echo $ARGS | grep -w -q -e "-v"; then
+	[[ ${ARGS[1]} != '' ]] && run_params[2]=${ARGS[1]};
+	quality=${run_params[2]};
 	yt-dlp --buffer-size $buffer -f $quality -o - "$url" 2> /dev/null |\
 		mpv --title="$title" - 2> /dev/null
+else
+	quality=${run_params[3]};
+	yt-dlp --buffer-size $buffer -f $quality -o - "$url" 2> /dev/null |\
+		mpv --no-video - 2> /dev/null
 fi
